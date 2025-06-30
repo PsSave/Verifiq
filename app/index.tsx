@@ -24,8 +24,8 @@ export default function Index() {
   );
 
   const mockLists = [
-    { name: "Lista de Compras", individual: false },
-    { name: "Tarefas Diárias", individual: true },
+    { id: "1", name: "Lista de Compras", individual: false },
+    { id: "2", name: "Tarefas Diárias", individual: true },
   ];
 
   return (
@@ -36,7 +36,12 @@ export default function Index() {
         <Text style={styles.title}>Lista</Text>
 
         {mockLists.map((list, index) => (
-          <ListItem key={index} name={list.name} individual={list.individual} />
+          <ListItem
+            key={index}
+            id={list.id}
+            name={list.name}
+            individual={list.individual}
+          />
         ))}
       </View>
 

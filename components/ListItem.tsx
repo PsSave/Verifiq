@@ -1,15 +1,28 @@
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface ListItemProps {
+  id?: string;
   name: string;
   individual: boolean;
   onPress?: () => void;
 }
 
-export function ListItem({ name, individual, onPress }: ListItemProps) {
+export function ListItem({ id, name, individual, onPress }: ListItemProps) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      // Navegar para a tela de detalhes da lista
+      router.push(`/list/${id || "1"}`);
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.listItem} onPress={onPress}>
+    <TouchableOpacity style={styles.listItem} onPress={handlePress}>
       <View>
         <Text style={styles.listName}>{name}</Text>
         <Text style={styles.listStatus}>
