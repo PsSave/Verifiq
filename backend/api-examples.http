@@ -1,0 +1,246 @@
+# API do Verifiq - Exemplos de Requisições
+# Use este arquivo com extensões como REST Client no VS Code
+
+@baseURL = http://localhost:3000/api
+@token = seu_token_jwt_aqui
+
+### Health Check
+GET {{baseURL}}/health
+
+### 1. AUTENTICAÇÃO
+
+### Registrar usuário
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao@exemplo.com",
+  "password": "123456"
+}
+
+### Login
+POST {{baseURL}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@verifiq.com",
+  "password": "admin123"
+}
+
+### Verificar token
+GET {{baseURL}}/auth/verify
+Authorization: Bearer {{token}}
+
+### Alterar senha
+PUT {{baseURL}}/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "admin123",
+  "newPassword": "novasenha123"
+}
+
+### 2. USUÁRIOS
+
+### Buscar perfil
+GET {{baseURL}}/users/profile
+Authorization: Bearer {{token}}
+
+### Atualizar perfil
+PUT {{baseURL}}/users/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Nome Atualizado",
+  "email": "novo@email.com"
+}
+
+### Exportar dados
+GET {{baseURL}}/users/export
+Authorization: Bearer {{token}}
+
+### Deletar conta
+DELETE {{baseURL}}/users/account
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "password": "admin123"
+}
+
+### 3. LISTAS
+
+### Listar listas do usuário
+GET {{baseURL}}/lists
+Authorization: Bearer {{token}}
+
+### Criar lista individual
+POST {{baseURL}}/lists
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Minha Lista Pessoal",
+  "description": "Lista para uso pessoal",
+  "isIndividual": true
+}
+
+### Criar lista compartilhada
+POST {{baseURL}}/lists
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Lista da Equipe",
+  "description": "Lista compartilhada com a equipe",
+  "isIndividual": false
+}
+
+### Buscar lista por ID
+GET {{baseURL}}/lists/1
+Authorization: Bearer {{token}}
+
+### Atualizar lista
+PUT {{baseURL}}/lists/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Nome Atualizado da Lista",
+  "description": "Descrição atualizada"
+}
+
+### Compartilhar lista
+POST {{baseURL}}/lists/1/share
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "usuario@exemplo.com",
+  "permission": "write"
+}
+
+### Ver usuários com acesso à lista
+GET {{baseURL}}/lists/1/shared-users
+Authorization: Bearer {{token}}
+
+### Remover compartilhamento
+DELETE {{baseURL}}/lists/1/share/2
+Authorization: Bearer {{token}}
+
+### Deletar lista
+DELETE {{baseURL}}/lists/1
+Authorization: Bearer {{token}}
+
+### 4. ITENS
+
+### Listar itens de uma lista
+GET {{baseURL}}/items/list/1
+Authorization: Bearer {{token}}
+
+### Criar item
+POST {{baseURL}}/items/list/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Comprar leite",
+  "description": "Leite integral 1L"
+}
+
+### Buscar item por ID
+GET {{baseURL}}/items/1
+Authorization: Bearer {{token}}
+
+### Atualizar item
+PUT {{baseURL}}/items/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Comprar leite desnatado",
+  "description": "Leite desnatado 1L",
+  "completed": false
+}
+
+### Alternar status do item (concluído/pendente)
+PATCH {{baseURL}}/items/1/toggle
+Authorization: Bearer {{token}}
+
+### Estatísticas da lista
+GET {{baseURL}}/items/list/1/stats
+Authorization: Bearer {{token}}
+
+### Deletar item
+DELETE {{baseURL}}/items/1
+Authorization: Bearer {{token}}
+
+### 5. EXEMPLOS DE TESTE COMPLETO
+
+### Fluxo completo: Criar lista → Adicionar itens → Marcar como concluído
+
+# 1. Criar uma lista de compras
+POST {{baseURL}}/lists
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Lista de Compras",
+  "description": "Compras do supermercado",
+  "isIndividual": true
+}
+
+# 2. Adicionar itens (use o ID da lista retornada acima)
+POST {{baseURL}}/items/list/ID_DA_LISTA
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Pão",
+  "description": "Pão francês"
+}
+
+# 3. Adicionar mais um item
+POST {{baseURL}}/items/list/ID_DA_LISTA
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Manteiga",
+  "description": "Manteiga sem sal"
+}
+
+# 4. Marcar item como concluído
+PATCH {{baseURL}}/items/ID_DO_ITEM/toggle
+Authorization: Bearer {{token}}
+
+# 5. Ver estatísticas da lista
+GET {{baseURL}}/items/list/ID_DA_LISTA/stats
+Authorization: Bearer {{token}}
+
+### 6. ERROS ESPERADOS (para testar validações)
+
+### Login com dados inválidos
+POST {{baseURL}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "email_inexistente@teste.com",
+  "password": "senha_errada"
+}
+
+### Tentar acessar rota protegida sem token
+GET {{baseURL}}/users/profile
+
+### Tentar criar lista sem nome
+POST {{baseURL}}/lists
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Lista sem nome",
+  "isIndividual": true
+}
