@@ -1,6 +1,6 @@
-import { View, StyleSheet } from "react-native";
-import { CustomInput } from "./CustomInput";
+import { StyleSheet, View } from "react-native";
 import { Button } from "./Button";
+import { CustomInput } from "./CustomInput";
 
 interface LoginFormProps {
   onLogin: () => void;
@@ -11,7 +11,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     <View style={styles.inputContainer}>
       <CustomInput placeholder="Email" />
       <CustomInput placeholder="Senha" secureTextEntry />
-      <Button text="Esqueci minha senha" variant="link" onPress={() => {}} />
       <Button text="Entrar" onPress={onLogin} />
     </View>
   );
