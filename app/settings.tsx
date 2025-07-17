@@ -1,40 +1,94 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Settings() {
   const router = useRouter();
+  const { logout, isAuthenticated, user } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated]);
+
   const menuItems: Array<{
     icon: keyof typeof Feather.glyphMap;
     label: string;
+    action: () => void;
   }> = [
-    { icon: "user", label: "Perfil" },
-    { icon: "sun", label: "Tema" },
-    { icon: "info", label: "Sobre" },
+    {
+      icon: "user",
+      label: "Perfil",
+      action: () => router.push("/profile"),
+    },
+    {
+      icon: "sun",
+      label: "Tema",
+      action: () => Alert.alert("Tema", "Funcionalidade em desenvolvimento"),
+    },
+    {
+      icon: "info",
+      label: "Sobre",
+      action: () => router.push("/about"),
+    },
   ];
 
-  const handleLogout = () => {
-    router.push("/login");
+  const handleGoBack = () => {
+    router.push("/");
   };
+
+  const handleLogout = () => {
+    Alert.alert("Sair", "Tem certeza que deseja sair da sua conta?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Sair",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+            router.replace("/login");
+          } catch (error) {
+            Alert.alert("Erro", "Erro ao fazer logout");
+          }
+        },
+      },
+    ]);
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Configurações</Text>
       </View>
+
+      {user && (
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Feather name="user" size={32} color="#007AFF" />
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userEmail}>{user.email}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.menuContainer}>
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
             style={styles.menuItem}
-            onPress={() => {}}
+            onPress={item.action}
           >
             <View style={styles.menuItemContent}>
               <Feather name={item.icon} size={20} color="#333" />
@@ -73,6 +127,38 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: "#333",
+  },
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    marginBottom: 20,
+    backgroundColor: "#F8F9FA",
+    marginHorizontal: 16,
+    borderRadius: 12,
+  },
+  avatarContainer: {
+    width: 60,
+    height: 60,
+    backgroundColor: "#F0F8FF",
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: "#666",
   },
   menuContainer: {
     flex: 1,

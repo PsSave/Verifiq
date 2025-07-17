@@ -1,8 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,9 +13,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../../contexts/AuthContext";
+import { useListDetails } from "../../utils/hooks";
 
 interface ListItem {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   image?: string;
@@ -22,29 +27,19 @@ interface ListItem {
 export default function ListDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { isAuthenticated } = useAuth();
 
-  // Mock data - em um app real, isso viria de um estado global ou API
-  const [listName] = useState("Lista de Compras");
-  const [items, setItems] = useState<ListItem[]>([
-    {
-      id: "1",
-      name: "Leite",
-      description: "Leite integral 1L",
-      completed: false,
-    },
-    {
-      id: "2",
-      name: "Pão",
-      description: "Pão francês",
-      completed: true,
-    },
-    {
-      id: "3",
-      name: "Ovos",
-      description: "Uma dúzia de ovos",
-      completed: false,
-    },
-  ]);
+  const {
+    list,
+    items,
+    isLoading,
+    error,
+    refetch,
+    createItem,
+    updateItem,
+    toggleItemCompleted,
+    deleteItem,
+  } = useListDetails(id as string);
 
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
@@ -52,33 +47,79 @@ export default function ListDetail() {
   const [newItemName, setNewItemName] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
 
-  const toggleItemCompleted = (itemId: string) => {
-    setItems(
-      items.map((item) =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      )
-    );
-  };
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated]);
 
-  const addNewItem = () => {
-    if (newItemName.trim()) {
-      const newItem: ListItem = {
-        id: Date.now().toString(),
-        name: newItemName.trim(),
-        description: newItemDescription.trim() || undefined,
-        completed: false,
-      };
-      setItems([...items, newItem]);
-      setNewItemName("");
-      setNewItemDescription("");
-      setIsAddModalVisible(false);
+  const handleToggleItem = async (itemId: number) => {
+    const result = await toggleItemCompleted(itemId.toString());
+    if (!result.success) {
+      Alert.alert("Erro", result.error || "Erro ao alterar status do item");
     }
   };
 
-  const openItemDetail = (item: ListItem) => {
+  const handleAddNewItem = async () => {
+    if (newItemName.trim()) {
+      const result = await createItem({
+        name: newItemName.trim(),
+        description: newItemDescription.trim() || undefined,
+      });
+
+      if (result.success) {
+        setNewItemName("");
+        setNewItemDescription("");
+        setIsAddModalVisible(false);
+        Alert.alert("Sucesso", "Item adicionado com sucesso!");
+      } else {
+        Alert.alert("Erro", result.error || "Erro ao adicionar item");
+      }
+    }
+  };
+
+  const openItemDetail = (item: any) => {
     setSelectedItem(item);
     setIsDetailModalVisible(true);
   };
+
+  const handleRefresh = () => {
+    refetch();
+  };
+
+  if (isLoading && !list) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Carregando lista...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+          <Text style={styles.retryButtonText}>Tentar novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!list) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <Text style={styles.errorText}>Lista não encontrada</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.retryButtonText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const completedCount = items.filter((item) => item.completed).length;
   const totalCount = items.length;
@@ -94,7 +135,7 @@ export default function ListDetail() {
           <Feather name="arrow-left" size={24} color="#007AFF" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{listName}</Text>
+          <Text style={styles.title}>{list.name}</Text>
           <Text style={styles.subtitle}>
             {completedCount} de {totalCount} concluídos
           </Text>
@@ -105,53 +146,66 @@ export default function ListDetail() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />
+        }
       >
-        {items.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.listItem}
-            onPress={() => openItemDetail(item)}
-          >
+        {items.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="list" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>Lista vazia</Text>
+            <Text style={styles.emptySubtext}>
+              Toque no botão + para adicionar itens
+            </Text>
+          </View>
+        ) : (
+          items.map((item) => (
             <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => toggleItemCompleted(item.id)}
+              key={item.id}
+              style={styles.listItem}
+              onPress={() => openItemDetail(item)}
             >
-              <View
-                style={[
-                  styles.checkbox,
-                  item.completed && styles.checkboxCompleted,
-                ]}
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleToggleItem(item.id)}
               >
-                {item.completed && (
-                  <Feather name="check" size={16} color="#fff" />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.itemContent}>
-              <Text
-                style={[
-                  styles.itemName,
-                  item.completed && styles.itemNameCompleted,
-                ]}
-              >
-                {item.name}
-              </Text>
-              {item.description && (
-                <Text
+                <View
                   style={[
-                    styles.itemDescription,
-                    item.completed && styles.itemDescriptionCompleted,
+                    styles.checkbox,
+                    item.completed && styles.checkboxCompleted,
                   ]}
                 >
-                  {item.description}
-                </Text>
-              )}
-            </View>
+                  {item.completed && (
+                    <Feather name="check" size={16} color="#fff" />
+                  )}
+                </View>
+              </TouchableOpacity>
 
-            <Feather name="chevron-right" size={20} color="#007AFF" />
-          </TouchableOpacity>
-        ))}
+              <View style={styles.itemContent}>
+                <Text
+                  style={[
+                    styles.itemName,
+                    item.completed && styles.itemNameCompleted,
+                  ]}
+                >
+                  {item.name}
+                </Text>
+                {item.description && (
+                  <Text
+                    style={[
+                      styles.itemDescription,
+                      item.completed && styles.itemDescriptionCompleted,
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
+                )}
+              </View>
+
+              <Feather name="chevron-right" size={20} color="#007AFF" />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       {/* Botão flutuante para adicionar item */}
@@ -198,7 +252,10 @@ export default function ListDetail() {
               numberOfLines={3}
             />
 
-            <TouchableOpacity style={styles.addButton} onPress={addNewItem}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddNewItem}
+            >
               <Text style={styles.addButtonText}>Adicionar</Text>
             </TouchableOpacity>
           </View>
@@ -258,7 +315,7 @@ export default function ListDetail() {
                     selectedItem.completed && styles.toggleButtonCompleted,
                   ]}
                   onPress={() => {
-                    toggleItemCompleted(selectedItem.id);
+                    handleToggleItem(selectedItem.id);
                     setIsDetailModalVisible(false);
                   }}
                 >
@@ -489,5 +546,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  errorContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#FF3B30",
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: "#333",
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginTop: 4,
   },
 });

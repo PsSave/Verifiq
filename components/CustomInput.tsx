@@ -1,14 +1,19 @@
-import { TextInput, StyleSheet } from "react-native";
 import { useState } from "react";
+import { StyleSheet, TextInput, TextInputProps } from "react-native";
 
-interface CustomInputProps {
+interface CustomInputProps extends TextInputProps {
   placeholder: string;
   secureTextEntry?: boolean;
+  value?: string;
+  onChangeText?: (text: string) => void;
 }
 
 export function CustomInput({
   placeholder,
   secureTextEntry,
+  value,
+  onChangeText,
+  ...otherProps
 }: CustomInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -18,8 +23,11 @@ export function CustomInput({
       placeholder={placeholder}
       placeholderTextColor="#666"
       secureTextEntry={secureTextEntry}
+      value={value}
+      onChangeText={onChangeText}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
+      {...otherProps}
     />
   );
 }
